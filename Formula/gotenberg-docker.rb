@@ -7,7 +7,7 @@ class GotenbergDocker < Formula
   # This is the exact SHA-256 hash of an empty file
   sha256 "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 
-  # depends_on "docker"
+  depends_on "docker" => :optional
 
   def install
     # Write a wrapper script that locates Docker and starts the container
