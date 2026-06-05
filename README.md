@@ -16,3 +16,7 @@ brew "<formula>"
 ## Documentation
 
 `brew help`, `man brew` or check [Homebrew's documentation](https://docs.brew.sh).
+
+## License
+
+This project is open-source software licensed under the [Apache License, Version 2.0](https://opensource.org/license/apache-2-0).
