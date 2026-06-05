@@ -5,7 +5,7 @@ class GotenbergDocker < Formula
   url "file:///dev/null"
   # This is the exact SHA-256 hash of an empty file
   sha256 "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-  version "1.1.0"
+  version "1.2.0"
 
   # Marked as optional so Homebrew doesn't force-install its own docker CLI package
   depends_on "docker" => :optional
@@ -23,6 +23,12 @@ class GotenbergDocker < Formula
       # Example:
       # GOTENBERG_DOMAINS="my-local-site.test api.internal.local"
       GOTENBERG_DOMAINS=""
+
+      # Space-separated CLI flags to pass to the "gotenberg" binary inside the container
+      # See https://gotenberg.dev/docs/configuration for all available modules and options.
+      # Example:
+      # GOTENBERG_CLI_ARGS="--api-timeout=60s --chromium-auto-start"
+      GOTENBERG_CLI_ARGS=""
     EOS
 
     # 2. Install config safely. Homebrew will not overwrite modifications on upgrade.
@@ -34,13 +40,15 @@ class GotenbergDocker < Formula
 
       # Load configuration file
       CONFIG_FILE="#{etc}/gotenberg-docker.conf"
-      GOTENBERG_DOMAINS=""
       GOTENBERG_VERSION="latest"
+      GOTENBERG_DOMAINS=""
+      GOTENBERG_CLI_ARGS=""
+
       if [ -f "\$CONFIG_FILE" ]; then
         source "\$CONFIG_FILE"
       fi
 
-      # Fallback to "latest" if variable is empty or cleared
+      # Fallback to "latest" if variable is empty
       if [ -z "\$GOTENBERG_VERSION" ]; then
         GOTENBERG_VERSION="latest"
       fi
@@ -66,18 +74,22 @@ class GotenbergDocker < Formula
         ADD_HOST_FLAGS+=("--add-host" "\$domain:host-gateway")
       done
 
+      # Build command-line arguments to pass directly to the containerized binary
+      CLI_ARGS=()
+      for arg in \$GOTENBERG_CLI_ARGS; do
+        CLI_ARGS+=("\$arg")
+      done
+
       # Clean up any existing container using this name
       "\$DOCKER_BIN" rm -f gotenberg-service 2>/dev/null
 
-      # Pull new image version
-      "$DOCKER_BIN" pull gotenberg/gotenberg:"\$GOTENBERG_VERSION"
-
-      # Execute the container with configured version and host resolution arguments
+      # Execute the container with configured parameters
       exec "\$DOCKER_BIN" run --rm \\
         "\${ADD_HOST_FLAGS[@]}" \\
         --name gotenberg-service \\
         -p 127.0.0.1:3000:3000 \\
-        gotenberg/gotenberg:"\$GOTENBERG_VERSION"
+        gotenberg/gotenberg:"\$GOTENBERG_VERSION" \\
+        gotenberg "\${CLI_ARGS[@]}"
     EOS
 
     chmod 0755, bin/"gotenberg-docker"
@@ -103,8 +115,12 @@ class GotenbergDocker < Formula
       A default configuration file has been installed to:
         #{etc}/gotenberg-docker.conf
 
-      You can edit this file to configure the container version tag and host resolution mapping.
-      Remember to restart the service after modifying the file:
+      You can edit this file to configure:
+        - Gotenberg container version tag (default: latest)
+        - Domain resolutions
+        - Command-line arguments for the gotenberg engine
+
+      Remember to restart the service after modifying the configuration:
         brew services restart gotenberg-docker
     EOS
   end
